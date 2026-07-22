@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>PDF共有サイト</title>
-  <!-- ① Supabase JS CDN を確実に読み込む -->
-  <script src="https://unpkg.com/@supabase/supabase-javascript@2/dist/umd/supabase.js"></script>
+  <!-- 正しい Supabase CDN URL -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
     #status { padding: 10px; background: #f0f0f0; margin-bottom: 10px; border-radius: 4px; }
@@ -32,26 +32,22 @@
   </section>
 
   <script>
-    // ② ここをご自身の情報に置き換えてください
+    // ① ご自身の Supabase 情報に書き換えてください
     const SUPABASE_URL = 'https://wgjhqhcrepyhqcxrxujg.supabase.co/rest/v1/';
     const SUPABASE_KEY = 'sb_publishable__5xWbo2yzkPwOyecIN_gOQ_6VE83HNT';
 
     const statusEl = document.getElementById('status');
     let supabaseClient;
 
-    // Supabaseの初期化
     try {
-      if (typeof supabase === 'undefined') {
-        throw new Error('Supabaseライブラリの読み込みに失敗しました。ネット接続を確認してください。');
-      }
-      // CDNから取得した global の supabase オブジェクトから Client を作成
+      // CDN (supabase-js) から Client を作成
       supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
       statusEl.innerHTML = 'Supabase接続完了。一覧を取得中...';
     } catch (e) {
       statusEl.innerHTML = `<span class="error">初期化エラー: ${e.message}</span>`;
     }
 
-    // 1. 一覧取得機能
+    // 一覧取得機能
     async function loadPdfs() {
       if (!supabaseClient) return;
       const listElement = document.getElementById('pdfList');
@@ -78,10 +74,10 @@
       });
     }
 
-    // 2. アップロード機能
+    // アップロード機能
     document.getElementById('uploadBtn').addEventListener('click', async () => {
       if (!supabaseClient) {
-        alert('初期化エラーのため送信できません');
+        alert('ライブラリが読み込まれていないため送信できません');
         return;
       }
 
