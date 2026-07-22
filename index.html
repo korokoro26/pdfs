@@ -3,55 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <title>PDF共有サイト</title>
-  <!-- SupabaseのJSライブラリを読み込み -->
+  <!-- Supabase JS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-javascript@2"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+    #status { padding: 10px; background: #f0f0f0; margin-bottom: 10px; border-radius: 4px; }
+    .error { color: red; font-weight: bold; }
+    .success { color: green; font-weight: bold; }
+  </style>
 </head>
 <body>
   <h1>PDF共有ポータル</h1>
 
-  <!-- アップロードフォーム -->
+  <!-- 状態表示エリア（エラーを画面に出す） -->
+  <div id="status">システム準備中...</div>
+
   <section>
-    <h2>PDFをアップロードする</h2>
+    <h2>PDFをアップロード</h2>
     <input type="file" id="pdfFile" accept="application/pdf">
     <button id="uploadBtn">送信する</button>
   </section>
 
   <hr>
 
-  <!-- PDF一覧表示エリア -->
   <section>
     <h2>共有されたPDF一覧</h2>
     <ul id="pdfList"></ul>
   </section>
 
   <script>
-    // 1. Supabaseの初期化（※ここに先ほどの情報を入力）
+    // 1. 設定情報の入力（※ここを必ず書き換えてください）
     const SUPABASE_URL = 'https://wgjhqhcrepyhqcxrxujg.supabase.co/rest/v1/';
     const SUPABASE_KEY = 'sb_publishable__5xWbo2yzkPwOyecIN_gOQ_6VE83HNT';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 2. ページを開いたときにPDF一覧を取得して表示する
+    const statusEl = document.getElementById('status');
+    let supabase;
+
+    try {
+      supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      statusEl.innerHTML = 'Supabase接続完了。一覧を取得中...';
+    } catch (e) {
+      statusEl.innerHTML = `<span class="error">初期化エラー: ${e.message}</span>`;
+    }
+
+    // 2. 一覧取得機能
     async function loadPdfs() {
       const listElement = document.getElementById('pdfList');
-      listElement.innerHTML = '読み込み中...';
-
-      // データベースから一覧を取得
+      
       const { data, error } = await supabase.from('pdf_list').select('*').order('created_at', { ascending: false });
 
       if (error) {
-        listElement.innerHTML = 'データの取得に失敗しました';
+        statusEl.innerHTML = `<span class="error">一覧取得失敗: ${error.message}</span>`;
         return;
       }
 
+      statusEl.innerHTML = '<span class="success">正常に通信できています</span>';
       listElement.innerHTML = '';
+      
+      if (data.length === 0) {
+        listElement.innerHTML = '<li>まだPDFはありません</li>';
+        return;
+      }
+
       data.forEach(item => {
         const li = document.createElement('li');
-        li.innerHTML = `<a href="${item.file_url}" target="_blank">${item.file_name}</a>`;
+        li.innerHTML = `<a href="${item.file_url}" target="_blank">${item.file_name}</a> (${new Date(item.created_at).toLocaleString()})`;
         listElement.appendChild(li);
       });
     }
 
-    // 3. アップロードボタンが押されたときの処理
+    // 3. アップロード機能
     document.getElementById('uploadBtn').addEventListener('click', async () => {
       const fileInput = document.getElementById('pdfFile');
       const file = fileInput.files[0];
@@ -61,40 +82,42 @@
         return;
       }
 
-      // ファイル名をユニークにする（重複防止）
+      statusEl.innerHTML = 'アップロード中...';
+
+      // ファイル名の重複防止
       const fileName = `${Date.now()}_${file.name}`;
 
-      // A. Storage（pdfsバケット）にファイルを保存
+      // A. Storageにアップロード
       const { data: storageData, error: storageError } = await supabase.storage
         .from('pdfs')
         .upload(fileName, file);
 
       if (storageError) {
-        alert('ファイルの保存に失敗しました: ' + storageError.message);
+        statusEl.innerHTML = `<span class="error">Storage保存エラー: ${storageError.message}</span>`;
         return;
       }
 
-      // 公開URLを取得
+      // 公開URLの取得
       const { data: urlData } = supabase.storage.from('pdfs').getPublicUrl(fileName);
       const publicUrl = urlData.publicUrl;
 
-      // B. Database（pdf_listテーブル）にファイル情報を保存
+      // B. データベースに保存
       const { error: dbError } = await supabase.from('pdf_list').insert([
         { file_name: file.name, file_url: publicUrl }
       ]);
 
       if (dbError) {
-        alert('情報の保存に失敗しました: ' + dbError.message);
+        statusEl.innerHTML = `<span class="error">DB保存エラー: ${dbError.message}</span>`;
         return;
       }
 
-      alert('アップロード完了！');
+      statusEl.innerHTML = '<span class="success">アップロード成功！</span>';
       fileInput.value = '';
-      loadPdfs(); // 一覧を再読み込み
+      loadPdfs();
     });
 
-    // 初期表示
-    loadPdfs();
+    // 初期実行
+    if (supabase) loadPdfs();
   </script>
 </body>
 </html>
