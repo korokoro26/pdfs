@@ -63,16 +63,29 @@
   <!-- ヘッダーエリア -->
   <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-apple-border/60">
     <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="p-2 bg-apple-primary/10 text-apple-primary rounded-xl">
-          <i data-lucide="file-text" class="w-6 h-6"></i>
+      <div class="flex items-center space-x-6">
+        <div class="flex items-center space-x-3">
+          <div class="p-2 bg-apple-primary/10 text-apple-primary rounded-xl">
+            <i data-lucide="file-text" class="w-6 h-6"></i>
+          </div>
+          <h1 class="text-xl font-semibold tracking-tight text-apple-text hidden sm:block">PDF共有ポータル</h1>
         </div>
-        <h1 class="text-xl font-semibold tracking-tight text-apple-text">PDF共有ポータル</h1>
+
+        <!-- 2ページ切り替えタブ -->
+        <nav class="flex bg-gray-100 p-1 rounded-xl space-x-1">
+          <button id="tabLibraryBtn" onclick="switchPage('library')" class="px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 bg-white text-apple-text shadow-sm">
+            PDFライブラリ
+          </button>
+          <button id="tabUploadBtn" onclick="switchPage('upload')" class="px-4 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 text-apple-secondaryText hover:text-apple-text">
+            PDFアップロード
+          </button>
+        </nav>
       </div>
+
       <!-- ステータスバッジ -->
       <div id="statusBadge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-apple-secondaryText transition-all duration-300">
         <span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse" id="statusDot"></span>
-        <span id="statusText">システム初期化中...</span>
+        <span id="statusText" class="hidden sm:inline">システム初期化中...</span>
       </div>
     </div>
   </header>
@@ -80,61 +93,8 @@
   <!-- メインコンテンツ -->
   <main class="max-w-6xl mx-auto px-6 py-8 w-full flex-grow space-y-8">
 
-    <!-- A. アップロードセクション -->
-    <section class="bg-apple-card rounded-2xl p-6 shadow-sm border border-apple-border/80 transition-all duration-300 max-w-2xl mx-auto">
-      <h2 class="text-lg font-semibold text-apple-text mb-4 flex items-center gap-2">
-        <i data-lucide="upload-cloud" class="w-5 h-5 text-apple-primary"></i>
-        新しいPDFをアップロード
-      </h2>
-
-      <!-- ドロップエリア -->
-      <div id="dropZone" class="border-2 border-dashed border-apple-border rounded-xl p-6 text-center bg-gray-50/50 hover:bg-gray-50 hover:border-apple-primary/50 transition-all cursor-pointer group">
-        <input type="file" id="pdfFile" accept="application/pdf" class="hidden">
-        
-        <div class="flex flex-col items-center justify-center space-y-3">
-          <div class="p-3 bg-white rounded-full shadow-sm border border-apple-border group-hover:scale-105 transition-transform">
-            <i data-lucide="file-up" class="w-7 h-7 text-apple-primary"></i>
-          </div>
-          <div>
-            <p class="text-sm font-medium text-apple-text">
-              クリックしてファイルを選択 <span class="text-apple-secondaryText font-normal">またはドラッグ＆ドロップ</span>
-            </p>
-            <p class="text-xs text-apple-secondaryText mt-1">PDF形式のみ対応</p>
-          </div>
-          <div id="selectedFileName" class="text-xs font-medium text-apple-primary bg-apple-primary/10 px-3 py-1 rounded-full hidden">
-            <!-- 選択ファイル名 -->
-          </div>
-        </div>
-      </div>
-
-      <!-- 入力フォームエリア -->
-      <div id="formFieldsContainer" class="mt-4 hidden space-y-3">
-        <div>
-          <label for="customTitle" class="block text-xs font-medium text-apple-secondaryText mb-1">
-            表示用タイトル（任意）
-          </label>
-          <input type="text" id="customTitle" placeholder="未入力の場合は元のファイル名が使われます" class="w-full px-3.5 py-2 text-sm bg-gray-50 border border-apple-border rounded-xl focus:outline-none focus:ring-2 focus:ring-apple-primary/20 focus:border-apple-primary transition-all">
-        </div>
-
-        <div>
-          <label for="uploadPassword" class="block text-xs font-medium text-apple-secondaryText mb-1">
-            保護パスワード（任意）
-          </label>
-          <input type="password" id="uploadPassword" placeholder="設定すると閲覧・削除時にこのパスワードが必要になります" class="w-full px-3.5 py-2 text-sm bg-gray-50 border border-apple-border rounded-xl focus:outline-none focus:ring-2 focus:ring-apple-primary/20 focus:border-apple-primary transition-all">
-        </div>
-      </div>
-
-      <!-- 送信ボタン -->
-      <div class="mt-4 flex justify-end">
-        <button id="uploadBtn" disabled class="px-6 py-2.5 bg-apple-primary hover:bg-apple-primaryHover disabled:opacity-40 disabled:hover:bg-apple-primary text-white text-sm font-medium rounded-xl shadow-sm transition-all duration-200 flex items-center space-x-2 cursor-pointer disabled:cursor-not-allowed">
-          <i data-lucide="send" class="w-4 h-4"></i>
-          <span>送信する</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- B. ライブラリ & 検索セクション -->
-    <section class="space-y-4">
+    <!-- ページ 1: PDFライブラリ (初期画面) -->
+    <section id="pageLibrary" class="space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 class="text-xl font-semibold text-apple-text flex items-center gap-2">
@@ -173,51 +133,101 @@
       </div>
     </section>
 
+    <!-- ページ 2: PDFアップロード -->
+    <section id="pageUpload" class="hidden bg-apple-card rounded-2xl p-6 shadow-sm border border-apple-border/80 transition-all duration-300 max-w-2xl mx-auto">
+      <h2 class="text-lg font-semibold text-apple-text mb-4 flex items-center gap-2">
+        <i data-lucide="upload-cloud" class="w-5 h-5 text-apple-primary"></i>
+        新しいPDFをアップロード
+      </h2>
+
+      <!-- ドロップエリア -->
+      <div id="dropZone" class="border-2 border-dashed border-apple-border rounded-xl p-6 text-center bg-gray-50/50 hover:bg-gray-50 hover:border-apple-primary/50 transition-all cursor-pointer group">
+        <input type="file" id="pdfFile" accept="application/pdf" class="hidden">
+        
+        <div class="flex flex-col items-center justify-center space-y-3">
+          <div class="p-3 bg-white rounded-full shadow-sm border border-apple-border group-hover:scale-105 transition-transform">
+            <i data-lucide="file-up" class="w-7 h-7 text-apple-primary"></i>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-apple-text">
+              クリックしてファイルを選択 <span class="text-apple-secondaryText font-normal">またはドラッグ＆ドロップ</span>
+            </p>
+            <p class="text-xs text-apple-secondaryText mt-1">PDF形式のみ対応</p>
+          </div>
+          <div id="selectedFileName" class="text-xs font-medium text-apple-primary bg-apple-primary/10 px-3 py-1 rounded-full hidden">
+            <!-- 選択ファイル名 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 入力フォームエリア -->
+      <div id="formFieldsContainer" class="mt-4 hidden space-y-3">
+        <div>
+          <label for="customTitle" class="block text-xs font-medium text-apple-secondaryText mb-1">
+            表示用タイトル（任意）
+          </label>
+          <input type="text" id="customTitle" placeholder="未入力の場合は元のファイル名が使われます" class="w-full px-3.5 py-2 text-sm bg-gray-50 border border-apple-border rounded-xl focus:outline-none focus:ring-2 focus:ring-apple-primary/20 focus:border-apple-primary transition-all">
+        </div>
+      </div>
+
+      <!-- 送信ボタン -->
+      <div class="mt-4 flex justify-end">
+        <button id="uploadBtn" disabled class="px-6 py-2.5 bg-apple-primary hover:bg-apple-primaryHover disabled:opacity-40 disabled:hover:bg-apple-primary text-white text-sm font-medium rounded-xl shadow-sm transition-all duration-200 flex items-center space-x-2 cursor-pointer disabled:cursor-not-allowed">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>送信する</span>
+        </button>
+      </div>
+    </section>
+
   </main>
 
   <!-- フッター -->
   <footer class="max-w-6xl mx-auto px-6 py-6 w-full text-center text-xs text-apple-secondaryText flex justify-between items-center border-t border-apple-border/40">
     <p>&copy; PDF Portal System</p>
-    <span class="opacity-40 text-[10px] font-mono">v2.3.0 (Watermark Enabled)</span>
+    <span class="opacity-40 text-[10px] font-mono">v2.4.0</span>
   </footer>
 
-  <!-- 認証モーダル -->
-  <div id="authModal" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
-    <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl border border-apple-border transform scale-95 transition-transform duration-200" id="authModalCard">
+  <!-- 透かし消去用パスワード認証モーダル -->
+  <div id="watermarkAuthModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl border border-apple-border transform scale-95 transition-transform duration-200" id="watermarkAuthModalCard">
       <div class="text-center space-y-3">
-        <div class="w-12 h-12 bg-blue-50 text-apple-primary rounded-full flex items-center justify-center mx-auto" id="authModalIcon">
-          <i data-lucide="lock" class="w-6 h-6"></i>
+        <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto">
+          <i data-lucide="shield-off" class="w-6 h-6"></i>
         </div>
-        <h3 class="text-base font-semibold text-apple-text" id="authModalTitle">パスワードが必要です</h3>
-        <p class="text-xs text-apple-secondaryText" id="authModalNotice">アクセスするにはパスワードを入力してください。</p>
+        <h3 class="text-base font-semibold text-apple-text">透かし消去キーの入力</h3>
+        <p class="text-xs text-apple-secondaryText">透かしを削除するには管理用パスワードを入力してください。</p>
       </div>
 
       <div class="mt-4 space-y-1 text-left">
-        <input type="password" id="authPasswordInput" placeholder="パスワードを入力" class="w-full px-3.5 py-2 text-sm bg-gray-50 border border-apple-border rounded-xl focus:outline-none focus:ring-2 focus:ring-apple-primary/20 focus:border-apple-primary transition-all">
-        <p id="authPasswordErrorMsg" class="text-[11px] text-apple-danger mt-1 hidden">パスワードが正しくありません</p>
+        <input type="password" id="watermarkPasswordInput" placeholder="パスワードを入力" class="w-full px-3.5 py-2 text-sm bg-gray-50 border border-apple-border rounded-xl focus:outline-none focus:ring-2 focus:ring-apple-primary/20 focus:border-apple-primary transition-all">
+        <p id="watermarkPasswordErrorMsg" class="text-[11px] text-apple-danger mt-1 hidden">パスワードが正しくありません</p>
       </div>
 
       <div class="mt-6 flex space-x-3">
-        <button id="cancelAuthBtn" class="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-apple-text text-xs font-medium rounded-xl transition-colors">
+        <button id="cancelWatermarkAuthBtn" class="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-apple-text text-xs font-medium rounded-xl transition-colors">
           キャンセル
         </button>
-        <button id="confirmAuthBtn" class="flex-1 py-2 bg-apple-primary hover:bg-apple-primaryHover text-white text-xs font-medium rounded-xl transition-colors">
-          認証する
+        <button id="confirmWatermarkAuthBtn" class="flex-1 py-2 bg-apple-primary hover:bg-apple-primaryHover text-white text-xs font-medium rounded-xl transition-colors">
+          実行
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ★ PDFインラインビューアモーダル（透かし描画用） -->
+  <!-- PDFインラインビューアモーダル -->
   <div id="pdfViewerModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex flex-col hidden opacity-0 transition-opacity duration-200 unselectable">
     <!-- ビューアヘッダー -->
     <div class="bg-white/10 backdrop-blur-md px-6 py-3 flex items-center justify-between text-white border-b border-white/10">
       <div class="flex items-center space-x-3 overflow-hidden">
-        <i data-lucide="shield-alert" class="w-5 h-5 text-amber-400 shrink-0"></i>
+        <i data-lucide="file-text" class="w-5 h-5 text-apple-primary shrink-0"></i>
         <span id="viewerTitle" class="text-sm font-medium truncate">PDF プレビュー</span>
       </div>
-      <div class="flex items-center space-x-4 shrink-0">
-        <span id="watermarkMeta" class="text-xs text-gray-300 font-mono hidden sm:inline-block"></span>
+      <div class="flex items-center space-x-3 shrink-0">
+        <!-- 透かし除去ボタン -->
+        <button id="removeWatermarkBtn" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs font-medium text-white transition-all flex items-center gap-1.5">
+          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+          <span>透かし消去</span>
+        </button>
         <button id="closeViewerBtn" class="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
@@ -233,15 +243,21 @@
   <script>
     const SUPABASE_URL = 'https://wgjhqhcrepyhqcxrxujg.supabase.co';
     const SUPABASE_KEY = 'sb_publishable__5xWbo2yzkPwOyecIN_gOQ_6VE83HNT';
+    const WATERMARK_REMOVE_PASS = '1193'; // 透かし消去用共通パスワード
 
-    // 擬似アカウントID生成（実環境ではログインユーザーIDを指定）
     const CURRENT_USER_ID = 'USER_' + Math.floor(1000 + Math.random() * 9000);
 
     let supabaseClient = null;
     let allPdfsCache = [];
-    let targetPdfAction = null; 
     let generatedThumbnailCanvas = null;
     let searchDebounceTimer = null;
+
+    // 現在閲覧中のPDF情報
+    let currentViewingPdf = {
+      url: null,
+      title: '',
+      isWatermarkDisabled: false
+    };
 
     const statusBadge = document.getElementById('statusBadge');
     const statusDot = document.getElementById('statusDot');
@@ -249,7 +265,6 @@
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('pdfFile');
     const customTitleInput = document.getElementById('customTitle');
-    const uploadPasswordInput = document.getElementById('uploadPassword');
     const formFieldsContainer = document.getElementById('formFieldsContainer');
     const selectedFileName = document.getElementById('selectedFileName');
     const uploadBtn = document.getElementById('uploadBtn');
@@ -259,21 +274,25 @@
     const clearSearchBtn = document.getElementById('clearSearchBtn');
     const searchSearchingNotice = document.getElementById('searchSearchingNotice');
 
-    const authModal = document.getElementById('authModal');
-    const authModalCard = document.getElementById('authModalCard');
-    const authModalTitle = document.getElementById('authModalTitle');
-    const authModalNotice = document.getElementById('authModalNotice');
-    const authModalIcon = document.getElementById('authModalIcon');
-    const authPasswordInput = document.getElementById('authPasswordInput');
-    const authPasswordErrorMsg = document.getElementById('authPasswordErrorMsg');
-    const cancelAuthBtn = document.getElementById('cancelAuthBtn');
-    const confirmAuthBtn = document.getElementById('confirmAuthBtn');
+    // タブ要素
+    const pageLibrary = document.getElementById('pageLibrary');
+    const pageUpload = document.getElementById('pageUpload');
+    const tabLibraryBtn = document.getElementById('tabLibraryBtn');
+    const tabUploadBtn = document.getElementById('tabUploadBtn');
+
+    // 透かし解除認証モーダル要素
+    const watermarkAuthModal = document.getElementById('watermarkAuthModal');
+    const watermarkAuthModalCard = document.getElementById('watermarkAuthModalCard');
+    const watermarkPasswordInput = document.getElementById('watermarkPasswordInput');
+    const watermarkPasswordErrorMsg = document.getElementById('watermarkPasswordErrorMsg');
+    const cancelWatermarkAuthBtn = document.getElementById('cancelWatermarkAuthBtn');
+    const confirmWatermarkAuthBtn = document.getElementById('confirmWatermarkAuthBtn');
 
     // Viewモーダル要素
     const pdfViewerModal = document.getElementById('pdfViewerModal');
     const pdfCanvasContainer = document.getElementById('pdfCanvasContainer');
     const viewerTitle = document.getElementById('viewerTitle');
-    const watermarkMeta = document.getElementById('watermarkMeta');
+    const removeWatermarkBtn = document.getElementById('removeWatermarkBtn');
     const closeViewerBtn = document.getElementById('closeViewerBtn');
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -292,6 +311,22 @@
       }
     }
 
+    function switchPage(page) {
+      if (page === 'library') {
+        pageLibrary.classList.remove('hidden');
+        pageUpload.classList.add('hidden');
+        
+        tabLibraryBtn.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 bg-white text-apple-text shadow-sm';
+        tabUploadBtn.className = 'px-4 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 text-apple-secondaryText hover:text-apple-text';
+      } else {
+        pageLibrary.classList.add('hidden');
+        pageUpload.classList.remove('hidden');
+
+        tabUploadBtn.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 bg-white text-apple-text shadow-sm';
+        tabLibraryBtn.className = 'px-4 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 text-apple-secondaryText hover:text-apple-text';
+      }
+    }
+
     function updateStatus(type, message) {
       statusText.innerText = message;
       if (type === 'loading') {
@@ -304,23 +339,6 @@
         statusBadge.className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-rose-50 text-rose-600';
         statusDot.className = 'w-2 h-2 rounded-full bg-rose-500';
       }
-    }
-
-    async function hashPassword(password) {
-      if (!password) return null;
-      const encoder = new TextEncoder();
-      const data = encoder.encode(password);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    function isPdfAuthenticated(pdfId) {
-      return sessionStorage.getItem(`pdf_auth_${pdfId}`) === 'true';
-    }
-
-    function setPdfAuthenticated(pdfId) {
-      sessionStorage.setItem(`pdf_auth_${pdfId}`, 'true');
     }
 
     function setupEventListeners() {
@@ -366,16 +384,15 @@
         filterAndRenderPdfs('');
       });
 
-      cancelAuthBtn.addEventListener('click', closeAuthModal);
-      confirmAuthBtn.addEventListener('click', executeAuthAction);
-
-      authPasswordInput.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') executeAuthAction();
+      // 透かし消去モーダルイベント
+      removeWatermarkBtn.addEventListener('click', openWatermarkAuthModal);
+      cancelWatermarkAuthBtn.addEventListener('click', closeWatermarkAuthModal);
+      confirmWatermarkAuthBtn.addEventListener('click', verifyWatermarkPassword);
+      watermarkPasswordInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') verifyWatermarkPassword();
       });
 
       closeViewerBtn.addEventListener('click', closePdfViewerModal);
-
-      // 右クリック防止等（簡易保護）
       pdfViewerModal.addEventListener('contextmenu', e => e.preventDefault());
     }
 
@@ -396,7 +413,6 @@
       selectedFileName.classList.remove('hidden');
       formFieldsContainer.classList.remove('hidden');
       customTitleInput.value = '';
-      uploadPasswordInput.value = '';
       uploadBtn.disabled = false;
 
       try {
@@ -511,18 +527,10 @@
 
         const storagePath = extractStoragePath(item.file_url);
         const thumbnailSrc = item.thumbnail_url || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%2386868B" stroke-width="1"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>';
-        
-        const isProtected = !!item.pass_hash;
 
         card.innerHTML = `
-          <div class="open-pdf-btn block aspect-[4/3] bg-gray-100 overflow-hidden relative group/img cursor-pointer" data-id="${item.id}" data-url="${item.file_url}" data-name="${escapeHtml(item.file_name)}" data-hash="${item.pass_hash || ''}">
+          <div class="open-pdf-btn block aspect-[4/3] bg-gray-100 overflow-hidden relative group/img cursor-pointer" data-url="${item.file_url}" data-name="${escapeHtml(item.file_name)}">
             <img src="${thumbnailSrc}" alt="${escapeHtml(item.file_name)}" class="w-full h-full object-cover object-top group-hover/img:scale-105 transition-transform duration-300">
-            
-            ${isProtected ? `
-              <div class="absolute top-2 left-2 p-1.5 bg-black/50 text-white rounded-lg backdrop-blur-md shadow-sm z-10" title="パスワード保護あり">
-                <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-              </div>
-            ` : ''}
 
             <div class="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-colors flex items-center justify-center">
               <span class="opacity-0 group-hover/img:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm text-apple-text text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-md flex items-center gap-1.5">
@@ -533,14 +541,13 @@
             <button class="delete-btn absolute top-2 right-2 p-2 bg-white/80 hover:bg-white text-apple-secondaryText hover:text-apple-danger rounded-xl backdrop-blur-md shadow-sm transition-all z-10" 
                     title="削除" 
                     data-id="${item.id}" 
-                    data-path="${storagePath}"
-                    data-hash="${item.pass_hash || ''}">
+                    data-path="${storagePath}">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
           </div>
 
           <div class="p-3.5 flex flex-col flex-grow justify-between">
-            <h3 class="open-pdf-btn font-medium text-xs sm:text-sm text-apple-text hover:text-apple-primary line-clamp-3 transition-colors leading-snug cursor-pointer" data-id="${item.id}" data-url="${item.file_url}" data-name="${escapeHtml(item.file_name)}" data-hash="${item.pass_hash || ''}" title="${escapeHtml(item.file_name)}">
+            <h3 class="open-pdf-btn font-medium text-xs sm:text-sm text-apple-text hover:text-apple-primary line-clamp-3 transition-colors leading-snug cursor-pointer" data-url="${item.file_url}" data-name="${escapeHtml(item.file_name)}" title="${escapeHtml(item.file_name)}">
               ${escapeHtml(item.file_name)}
             </h3>
             <span class="text-[10px] sm:text-[11px] text-apple-secondaryText mt-2 block">${dateStr}</span>
@@ -552,15 +559,19 @@
 
       lucide.createIcons();
 
+      // パスワード不要で直接開く処理
       document.querySelectorAll('.open-pdf-btn').forEach(elem => {
         elem.addEventListener('click', (e) => {
           const btn = e.currentTarget;
-          handleViewPdf({
-            pdfId: btn.getAttribute('data-id'),
-            pdfUrl: btn.getAttribute('data-url'),
-            fileName: btn.getAttribute('data-name'),
-            passHash: btn.getAttribute('data-hash') || null
-          });
+          const url = btn.getAttribute('data-url');
+          const name = btn.getAttribute('data-name');
+          
+          currentViewingPdf.url = url;
+          currentViewingPdf.title = name;
+          currentViewingPdf.isWatermarkDisabled = false; // 初期値は透かしあり
+
+          removeWatermarkBtn.classList.remove('hidden');
+          renderPdfView();
         });
       });
 
@@ -570,82 +581,104 @@
           const button = e.currentTarget;
           handleDeletePdf({
             pdfId: button.getAttribute('data-id'),
-            storagePath: button.getAttribute('data-path'),
-            passHash: button.getAttribute('data-hash') || null
+            storagePath: button.getAttribute('data-path')
           });
         });
       });
     }
 
-    function handleViewPdf(fileInfo) {
-      if (!fileInfo.passHash || isPdfAuthenticated(fileInfo.pdfId)) {
-        renderPdfWithWatermark(fileInfo.pdfUrl, fileInfo.fileName, !!fileInfo.passHash);
-      } else {
-        targetPdfAction = { action: 'view', ...fileInfo };
-        openAuthModal('view');
-      }
-    }
+    async function handleDeletePdf(fileInfo) {
+      if (!supabaseClient) return;
 
-    function handleDeletePdf(fileInfo) {
-      targetPdfAction = { action: 'delete', ...fileInfo };
-      if (!fileInfo.passHash) {
-        executeDelete();
-      } else {
-        openAuthModal('delete');
-      }
-    }
-
-    async function executeAuthAction() {
-      if (!targetPdfAction) return;
-
-      const inputPass = authPasswordInput.value.trim();
-      const inputHash = await hashPassword(inputPass);
-
-      if (inputHash !== targetPdfAction.passHash) {
-        authPasswordErrorMsg.classList.remove('hidden');
-        authPasswordInput.classList.add('border-apple-danger');
+      if (!confirm('このファイルを削除してもよろしいですか？')) {
         return;
       }
 
-      closeAuthModal();
+      updateStatus('loading', 'ファイルを削除中...');
 
-      if (targetPdfAction.action === 'view') {
-        setPdfAuthenticated(targetPdfAction.pdfId);
-        renderPdfWithWatermark(targetPdfAction.pdfUrl, targetPdfAction.fileName, true);
-      } else if (targetPdfAction.action === 'delete') {
-        executeDelete();
+      try {
+        if (fileInfo.storagePath) {
+          const thumbPath = `thumb_${fileInfo.storagePath}.jpg`;
+          await supabaseClient.storage.from('pdfs').remove([fileInfo.storagePath, thumbPath]);
+        }
+
+        const { error: dbError } = await supabaseClient
+          .from('pdf_list')
+          .delete()
+          .eq('id', fileInfo.pdfId);
+
+        if (dbError) throw dbError;
+
+        updateStatus('success', '削除が完了しました');
+        loadPdfs();
+
+      } catch (err) {
+        updateStatus('error', `削除エラー: ${err.message}`);
       }
     }
 
-    /* ★ 透かし入りPDFレンダリング処理（全ファイル対象） */
-    async function renderPdfWithWatermark(pdfUrl, fileName, isProtected) {
+    /* ★ 透かし消去ボタン用認証モーダル制御 */
+    function openWatermarkAuthModal() {
+      watermarkPasswordInput.value = '';
+      watermarkPasswordErrorMsg.classList.add('hidden');
+      watermarkPasswordInput.classList.remove('border-apple-danger');
+
+      watermarkAuthModal.classList.remove('hidden');
+      setTimeout(() => {
+        watermarkAuthModal.classList.remove('opacity-0');
+        watermarkAuthModalCard.classList.remove('scale-95');
+        watermarkAuthModalCard.classList.add('scale-100');
+        watermarkPasswordInput.focus();
+      }, 10);
+    }
+
+    function closeWatermarkAuthModal() {
+      watermarkAuthModal.classList.add('opacity-0');
+      watermarkAuthModalCard.classList.remove('scale-100');
+      watermarkAuthModalCard.classList.add('scale-95');
+      setTimeout(() => {
+        watermarkAuthModal.classList.add('hidden');
+      }, 200);
+    }
+
+    function verifyWatermarkPassword() {
+      const inputPass = watermarkPasswordInput.value.trim();
+      if (inputPass === WATERMARK_REMOVE_PASS) {
+        closeWatermarkAuthModal();
+        currentViewingPdf.isWatermarkDisabled = true;
+        removeWatermarkBtn.classList.add('hidden'); // 消去済みのため非表示
+        renderPdfView(); // 再描画
+      } else {
+        watermarkPasswordErrorMsg.classList.remove('hidden');
+        watermarkPasswordInput.classList.add('border-apple-danger');
+      }
+    }
+
+    /* ★ PDFレンダリング処理 */
+    async function renderPdfView() {
       pdfCanvasContainer.innerHTML = `
         <div class="text-white text-center py-20 space-y-3">
           <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-apple-primary"></i>
-          <p class="text-sm font-medium">ドキュメントを取得・透かし処理中...</p>
+          <p class="text-sm font-medium">ドキュメントをレンダリング中...</p>
         </div>`;
       lucide.createIcons();
 
-      viewerTitle.innerText = fileName;
+      viewerTitle.innerText = currentViewingPdf.title;
       pdfViewerModal.classList.remove('hidden');
       setTimeout(() => pdfViewerModal.classList.remove('opacity-0'), 10);
 
       try {
-        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+        const loadingTask = pdfjsLib.getDocument(currentViewingPdf.url);
         const pdf = await loadingTask.promise;
         pdfCanvasContainer.innerHTML = '';
 
         const now = new Date();
         const dateFormatted = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        
-        // 透かしテキスト：アカウントID＋アクセス日時
         const watermarkText = `${CURRENT_USER_ID} | ${dateFormatted}`;
-        watermarkMeta.innerText = `透かし合成済: ${watermarkText}`;
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
           const page = await pdf.getPage(pageNum);
           
-          // 画面サイズに応じたスケール調整
           const scale = window.innerWidth < 640 ? 1.0 : 1.5;
           const viewport = page.getViewport({ scale: scale });
 
@@ -655,11 +688,13 @@
           canvas.width = viewport.width;
           canvas.className = "shadow-2xl rounded bg-white max-w-full";
 
-          // 1. PDFページの描画
+          // PDF描画
           await page.render({ canvasContext: context, viewport: viewport }).promise;
 
-          // 2. すべてのPDFに透かしを自動合成
-          drawWatermarkOnCanvas(context, canvas.width, canvas.height, watermarkText);
+          // 透かし消去フラグが立っていない場合のみ描画
+          if (!currentViewingPdf.isWatermarkDisabled) {
+            drawWatermarkOnCanvas(context, canvas.width, canvas.height, watermarkText);
+          }
 
           pdfCanvasContainer.appendChild(canvas);
         }
@@ -673,19 +708,16 @@
       }
     }
 
-    /* ★ Canvas全体に斜めの透かし文字をグリッド配置描画 */
+    /* Canvas全体に斜めの透かし文字を描画 */
     function drawWatermarkOnCanvas(ctx, width, height, text) {
       ctx.save();
       
-      // 薄いグレーの透明度設定
       ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
       ctx.font = "bold 18px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      // 45度回転
       const angle = -30 * Math.PI / 180;
-      
       const stepX = 260;
       const stepY = 180;
 
@@ -710,73 +742,6 @@
       }, 200);
     }
 
-    async function executeDelete() {
-      if (!targetPdfAction || targetPdfAction.action !== 'delete' || !supabaseClient) return;
-
-      if (!confirm('このファイルを削除してもよろしいですか？')) {
-        targetPdfAction = null;
-        return;
-      }
-
-      updateStatus('loading', 'ファイルを削除中...');
-
-      try {
-        if (targetPdfAction.storagePath) {
-          const thumbPath = `thumb_${targetPdfAction.storagePath}.jpg`;
-          await supabaseClient.storage.from('pdfs').remove([targetPdfAction.storagePath, thumbPath]);
-        }
-
-        const { error: dbError } = await supabaseClient
-          .from('pdf_list')
-          .delete()
-          .eq('id', targetPdfAction.pdfId);
-
-        if (dbError) throw dbError;
-
-        updateStatus('success', '削除が完了しました');
-        targetPdfAction = null;
-        loadPdfs();
-
-      } catch (err) {
-        updateStatus('error', `削除エラー: ${err.message}`);
-      }
-    }
-
-    function openAuthModal(mode) {
-      authPasswordInput.value = '';
-      authPasswordErrorMsg.classList.add('hidden');
-      authPasswordInput.classList.remove('border-apple-danger');
-
-      if (mode === 'delete') {
-        authModalTitle.innerText = '削除パスワードの入力';
-        authModalNotice.innerText = 'このファイルを削除するには設定されたパスワードが必要です。';
-        authModalIcon.className = 'w-12 h-12 bg-red-50 text-apple-danger rounded-full flex items-center justify-center mx-auto';
-        confirmAuthBtn.className = 'flex-1 py-2 bg-apple-danger hover:bg-apple-dangerHover text-white text-xs font-medium rounded-xl transition-colors';
-      } else {
-        authModalTitle.innerText = '閲覧パスワードの入力';
-        authModalNotice.innerText = 'このPDFを閲覧するには設定されたパスワードが必要です。';
-        authModalIcon.className = 'w-12 h-12 bg-blue-50 text-apple-primary rounded-full flex items-center justify-center mx-auto';
-        confirmAuthBtn.className = 'flex-1 py-2 bg-apple-primary hover:bg-apple-primaryHover text-white text-xs font-medium rounded-xl transition-colors';
-      }
-
-      authModal.classList.remove('hidden');
-      setTimeout(() => {
-        authModal.classList.remove('opacity-0');
-        authModalCard.classList.remove('scale-95');
-        authModalCard.classList.add('scale-100');
-        authPasswordInput.focus();
-      }, 10);
-    }
-
-    function closeAuthModal() {
-      authModal.classList.add('opacity-0');
-      authModalCard.classList.remove('scale-100');
-      authModalCard.classList.add('scale-95');
-      setTimeout(() => {
-        authModal.classList.add('hidden');
-      }, 200);
-    }
-
     async function handleUpload() {
       if (!supabaseClient) return;
 
@@ -792,9 +757,6 @@
       const displayTitle = customTitleInput.value.trim() !== '' 
         ? customTitleInput.value.trim() 
         : file.name;
-
-      const rawPassword = uploadPasswordInput.value.trim();
-      const passHash = await hashPassword(rawPassword);
 
       try {
         let thumbnailUrl = null;
@@ -834,8 +796,7 @@
           .insert([{ 
             file_name: displayTitle, 
             file_url: publicUrl,
-            thumbnail_url: thumbnailUrl,
-            pass_hash: passHash
+            thumbnail_url: thumbnailUrl
           }]);
 
         if (dbError) throw dbError;
@@ -844,12 +805,12 @@
         
         fileInput.value = '';
         customTitleInput.value = '';
-        uploadPasswordInput.value = '';
         selectedFileName.classList.add('hidden');
         formFieldsContainer.classList.add('hidden');
         generatedThumbnailCanvas = null;
         
         loadPdfs();
+        switchPage('library'); // アップロード完了後にライブラリへ戻る
 
       } catch (err) {
         updateStatus('error', `エラー: ${err.message}`);
