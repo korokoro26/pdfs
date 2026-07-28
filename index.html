@@ -617,7 +617,7 @@
       }
     }
 
-    /* ★ 透かし入りPDFレンダリング処理 */
+    /* ★ 透かし入りPDFレンダリング処理（全ファイル対象） */
     async function renderPdfWithWatermark(pdfUrl, fileName, isProtected) {
       pdfCanvasContainer.innerHTML = `
         <div class="text-white text-center py-20 space-y-3">
@@ -640,7 +640,7 @@
         
         // 透かしテキスト：アカウントID＋アクセス日時
         const watermarkText = `${CURRENT_USER_ID} | ${dateFormatted}`;
-        watermarkMeta.innerText = isProtected ? `透かし合成済: ${watermarkText}` : 'パブリック閲覧';
+        watermarkMeta.innerText = `透かし合成済: ${watermarkText}`;
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
           const page = await pdf.getPage(pageNum);
@@ -658,10 +658,8 @@
           // 1. PDFページの描画
           await page.render({ canvasContext: context, viewport: viewport }).promise;
 
-          // 2. 保護対象PDFの場合に透かしを自動合成
-          if (isProtected) {
-            drawWatermarkOnCanvas(context, canvas.width, canvas.height, watermarkText);
-          }
+          // 2. すべてのPDFに透かしを自動合成
+          drawWatermarkOnCanvas(context, canvas.width, canvas.height, watermarkText);
 
           pdfCanvasContainer.appendChild(canvas);
         }
