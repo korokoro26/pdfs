@@ -67,6 +67,14 @@
     .safe-padding-bottom {
       padding-bottom: env(safe-area-inset-bottom, 0px);
     }
+    /* 横スクロールバー非表示用ユーティリティ */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
   </style>
 </head>
 <body class="bg-apple-bg text-apple-text font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-apple-primary selection:text-white unselectable">
@@ -116,7 +124,7 @@
         </div>
 
         <div class="flex items-center gap-2 w-full sm:w-auto">
-          <!-- 検索バー（アプデ：ファイル名とタグに絞った検索へ変更） -->
+          <!-- 検索バー -->
           <div class="relative flex-grow sm:w-72">
             <input type="text" id="searchInput" placeholder="ファイル名・タグで検索..." class="w-full pl-9 pr-8 py-2.5 text-sm bg-white border border-apple-border/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-apple-primary/20 focus:border-apple-primary transition-all shadow-sm min-h-[44px]">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-apple-secondaryText">
@@ -130,6 +138,17 @@
           <button id="refreshBtn" class="p-2 text-apple-secondaryText hover:text-apple-text bg-white rounded-xl border border-apple-border/80 transition-all shadow-sm shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center" title="更新">
             <i data-lucide="refresh-cw" class="w-4 h-4"></i>
           </button>
+        </div>
+      </div>
+
+      <!-- ★ アプデ：タグ絞り込みタブバー -->
+      <div id="tagBarContainer" class="bg-white/80 backdrop-blur-md rounded-2xl p-2.5 border border-apple-border/80 shadow-sm flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <div class="flex items-center gap-1.5 text-apple-secondaryText text-xs font-medium shrink-0 pl-1 pr-2 border-r border-apple-border">
+          <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+          <span>タグ絞り込み:</span>
+        </div>
+        <div id="tagTabList" class="flex items-center gap-1.5 shrink-0">
+          <!-- タグタブが動的に追加されます -->
         </div>
       </div>
 
@@ -204,7 +223,7 @@
   <!-- フッター (バージョン表示) -->
   <footer class="max-w-6xl mx-auto px-6 py-6 w-full text-center text-xs text-apple-secondaryText flex justify-between items-center border-t border-apple-border/40 safe-padding-bottom">
     <p>&copy; PDF Portal System</p>
-    <span class="opacity-30 text-[10px] font-mono">v2.7.1</span>
+    <span class="opacity-30 text-[10px] font-mono">v2.8.0</span>
   </footer>
 
   <!-- モーダル1: ファイル名＆タグ編集ダイアログ -->
@@ -302,7 +321,6 @@
         <span id="viewerTitle" class="text-sm font-medium truncate">PDF プレビュー</span>
       </div>
       <div class="flex items-center space-x-3 shrink-0">
-        <!-- DLボタン追加（アプデ：透かしなしPDFダウンロード機能） -->
         <button id="downloadPdfBtn" class="min-h-[44px] px-3 py-1.5 bg-apple-primary hover:bg-apple-primaryHover border border-apple-primary rounded-lg text-xs font-medium text-white transition-all flex items-center gap-1.5 shadow-sm">
           <i data-lucide="download" class="w-3.5 h-3.5"></i>
           <span>ダウンロード</span>
@@ -331,6 +349,7 @@
 
     let supabaseClient = null;
     let allPdfsCache = [];
+    let selectedTagFilter = null; // ★ アプデ：現在選択中のタグフィルター保持
     let generatedThumbnailCanvas = null;
     let searchDebounceTimer = null;
     let db = null; // IndexedDB instance
@@ -358,6 +377,7 @@
     const refreshBtn = document.getElementById('refreshBtn');
     const searchInput = document.getElementById('searchInput');
     const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const tagTabList = document.getElementById('tagTabList'); // ★ アプデ：タグタブコンテナ
 
     const pageLibrary = document.getElementById('pageLibrary');
     const pageUpload = document.getElementById('pageUpload');
@@ -596,7 +616,6 @@
       cancelWatermarkAuthBtn.addEventListener('click', closeWatermarkAuthModal);
       confirmWatermarkAuthBtn.addEventListener('click', verifyWatermarkPassword);
 
-      // DLボタン処理（アプデ：透かしなしPDFを直接ダウンロード）
       downloadPdfBtn.addEventListener('click', downloadCurrentPdf);
 
       closeViewerBtn.addEventListener('click', closePdfViewerModal);
@@ -656,42 +675,113 @@
         if (error) {
           showCommunicationError('PDFライブラリ取得', error.message);
           updateStatus('error', `取得失敗: ${error.message}`);
-          // オフライン/通信エラー時は IndexedDB から読み込み
           const localData = await loadPdfsFromIndexedDB();
           allPdfsCache = localData;
+          renderTagTabs();
           filterAndRenderPdfs(searchInput.value.trim());
           return;
         }
 
         updateStatus('success', '正常に同期中');
         allPdfsCache = data || [];
-        savePdfsToIndexedDB(allPdfsCache); // IndexedDBへ保存
+        savePdfsToIndexedDB(allPdfsCache);
+        renderTagTabs();
         filterAndRenderPdfs(searchInput.value.trim());
       } catch (e) {
         showCommunicationError('PDFライブラリ通信', e.message);
         const localData = await loadPdfsFromIndexedDB();
         allPdfsCache = localData;
+        renderTagTabs();
         filterAndRenderPdfs(searchInput.value.trim());
       }
     }
 
-    /* ★ アプデ：検索機能でファイル名とタグのみに絞った検索処理へ変更 */
-    function filterAndRenderPdfs(query) {
-      if (!query) {
-        renderPdfGrid(allPdfsCache);
+    /* ★ アプデ：既存のタグをタブボタンとして抽出・描画する処理 */
+    function renderTagTabs() {
+      // 全ドキュメントからユニークなタグを抽出
+      const tagSet = new Set();
+      allPdfsCache.forEach(item => {
+        if (Array.isArray(item.tags)) {
+          item.tags.forEach(t => {
+            if (t && t.trim() !== '') tagSet.add(t.trim());
+          });
+        }
+      });
+
+      const uniqueTags = Array.from(tagSet);
+      tagTabList.innerHTML = '';
+
+      // タグが存在しない場合
+      if (uniqueTags.length === 0) {
+        tagTabList.innerHTML = '<span class="text-xs text-apple-secondaryText py-1 px-2">タグはまだ登録されていません</span>';
+        selectedTagFilter = null;
         return;
       }
 
-      const lowerQuery = query.toLowerCase();
-
-      // ファイル名およびタグに一致するものに絞り込み（PDF本文検索は除外）
-      const matchedPdfs = allPdfsCache.filter(item => {
-        const titleMatch = item.file_name && item.file_name.toLowerCase().includes(lowerQuery);
-        const tagMatch = item.tags && Array.isArray(item.tags) && item.tags.some(tag => tag.toLowerCase().includes(lowerQuery));
-        return titleMatch || tagMatch;
+      // 「すべて」タブボタン
+      const allBtn = document.createElement('button');
+      allBtn.type = 'button';
+      const isAllActive = selectedTagFilter === null;
+      allBtn.className = `min-h-[38px] px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all duration-200 ${
+        isAllActive
+          ? 'bg-apple-primary text-white shadow-sm'
+          : 'bg-gray-100 hover:bg-gray-200 text-apple-secondaryText hover:text-apple-text'
+      }`;
+      allBtn.innerText = 'すべて';
+      allBtn.addEventListener('click', () => {
+        selectedTagFilter = null;
+        renderTagTabs();
+        filterAndRenderPdfs(searchInput.value.trim());
       });
+      tagTabList.appendChild(allBtn);
 
-      renderPdfGrid(matchedPdfs);
+      // 各個別タグタブボタン
+      uniqueTags.forEach(tag => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const isActive = selectedTagFilter === tag;
+        btn.className = `min-h-[38px] px-3.5 py-1.5 text-xs font-medium rounded-xl transition-all duration-200 whitespace-nowrap ${
+          isActive
+            ? 'bg-apple-primary text-white font-semibold shadow-sm'
+            : 'bg-gray-100 hover:bg-gray-200 text-apple-text'
+        }`;
+        btn.innerText = `#${tag}`;
+        btn.addEventListener('click', () => {
+          // 同じタブを再タップで解除（すべて表示へトグル）
+          if (selectedTagFilter === tag) {
+            selectedTagFilter = null;
+          } else {
+            selectedTagFilter = tag;
+          }
+          renderTagTabs();
+          filterAndRenderPdfs(searchInput.value.trim());
+        });
+        tagTabList.appendChild(btn);
+      });
+    }
+
+    /* ★ アプデ：検索機能（ファイル名・テキスト検索＋タグタブ選択での二重絞り込み） */
+    function filterAndRenderPdfs(query) {
+      let filtered = allPdfsCache;
+
+      // 1. タグタブ選択によるフィルタリング
+      if (selectedTagFilter) {
+        filtered = filtered.filter(item => 
+          Array.isArray(item.tags) && item.tags.some(tag => tag.toLowerCase() === selectedTagFilter.toLowerCase())
+        );
+      }
+
+      // 2. 検索バー入力によるフィルタリング (ファイル名およびタグ)
+      if (query) {
+        const lowerQuery = query.toLowerCase();
+        filtered = filtered.filter(item => {
+          const titleMatch = item.file_name && item.file_name.toLowerCase().includes(lowerQuery);
+          const tagMatch = item.tags && Array.isArray(item.tags) && item.tags.some(tag => tag.toLowerCase().includes(lowerQuery));
+          return titleMatch || tagMatch;
+        });
+      }
+
+      renderPdfGrid(filtered);
     }
 
     function renderPdfGrid(items) {
@@ -704,6 +794,7 @@
             <i data-lucide="file-x" class="w-10 h-10 mx-auto mb-2 text-gray-300"></i>
             条件に一致するPDFは見つかりませんでした。
           </div>`;
+        lucide.createIcons();
         return;
       }
 
@@ -774,10 +865,10 @@
                 ${escapeHtml(item.file_name)}
               </h3>
 
-              <!-- タグピル表示 -->
+              <!-- タグピル表示 (クリックでタグ絞り込みを実行) -->
               ${tags.length > 0 ? `
                 <div class="flex flex-wrap gap-1 mt-1.5">
-                  ${tags.map(t => `<span class="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-apple-secondaryText text-[10px] font-medium rounded-md transition-colors">#${escapeHtml(t)}</span>`).join('')}
+                  ${tags.map(t => `<button type="button" class="tag-pill-btn px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-apple-secondaryText text-[10px] font-medium rounded-md transition-colors" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join('')}
                 </div>
               ` : ''}
             </div>
@@ -805,6 +896,17 @@
           } else {
             openPdfDirectly(url, name);
           }
+        });
+      });
+
+      // カード内タグピルクリック時のフィルター連携
+      document.querySelectorAll('.tag-pill-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const tag = btn.getAttribute('data-tag');
+          selectedTagFilter = tag;
+          renderTagTabs();
+          filterAndRenderPdfs(searchInput.value.trim());
         });
       });
 
@@ -1017,7 +1119,6 @@
       }
     }
 
-    /* ★ アプデ：透かしなしPDFダウンロード機能 */
     async function downloadCurrentPdf() {
       if (!currentViewingPdf.url) return;
       try {
@@ -1181,8 +1282,8 @@
           .from('pdf_list')
           .insert([{ 
             file_name: displayTitle, 
-            file_url: publicUrl,
-            thumbnail_url: thumbnailUrl,
+            file_url: publicUrl, 
+            thumbnail_url: thumbnailUrl, 
             password: filePassword !== '' ? filePassword : null,
             tags: tags
           }]);
