@@ -90,7 +90,7 @@
           <h1 class="text-xl font-semibold tracking-tight text-apple-text hidden sm:block">PDF共有ポータル</h1>
         </div>
 
-        <!-- タブナビゲーション (HIG 44px min tap area) -->
+        <!-- タブナビゲーション -->
         <nav class="flex bg-gray-100 p-1 rounded-xl space-x-1">
           <button id="tabLibraryBtn" onclick="switchPage('library')" class="min-h-[44px] px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 bg-white text-apple-text shadow-sm flex items-center justify-center">
             PDFライブラリ
@@ -141,7 +141,7 @@
         </div>
       </div>
 
-      <!-- ★ アプデ：タグ絞り込みタブバー -->
+      <!-- タグ絞り込みタブバー -->
       <div id="tagBarContainer" class="bg-white/80 backdrop-blur-md rounded-2xl p-2.5 border border-apple-border/80 shadow-sm flex items-center gap-2 overflow-x-auto no-scrollbar">
         <div class="flex items-center gap-1.5 text-apple-secondaryText text-xs font-medium shrink-0 pl-1 pr-2 border-r border-apple-border">
           <i data-lucide="filter" class="w-3.5 h-3.5"></i>
@@ -220,10 +220,10 @@
 
   </main>
 
-  <!-- フッター (バージョン表示) -->
+  <!-- フッター -->
   <footer class="max-w-6xl mx-auto px-6 py-6 w-full text-center text-xs text-apple-secondaryText flex justify-between items-center border-t border-apple-border/40 safe-padding-bottom">
     <p>&copy; PDF Portal System</p>
-    <span class="opacity-30 text-[10px] font-mono">v2.8.0</span>
+    <span class="opacity-30 text-[10px] font-mono">v2.9.0</span>
   </footer>
 
   <!-- モーダル1: ファイル名＆タグ編集ダイアログ -->
@@ -313,6 +313,30 @@
     </div>
   </div>
 
+  <!-- モーダル4: 削除確認ダイアログ (新規追加) -->
+  <div id="deleteConfirmModal" class="modal-overlay fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+    <div class="modal-card bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl border border-apple-border transform scale-95 transition-transform duration-200" id="deleteConfirmModalCard">
+      <div class="text-center space-y-3">
+        <div class="w-12 h-12 bg-rose-50 text-apple-danger rounded-full flex items-center justify-center mx-auto">
+          <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-base font-semibold text-apple-text">ドキュメントの削除</h3>
+        <p class="text-xs text-apple-secondaryText leading-relaxed">
+          「<span id="deleteConfirmFileName" class="font-medium text-apple-text"></span>」を完全に削除しますか？この操作は取り消せません。
+        </p>
+      </div>
+
+      <div class="mt-6 flex space-x-3">
+        <button id="cancelDeleteBtn" class="flex-1 min-h-[44px] py-2 bg-gray-100 hover:bg-gray-200 text-apple-text text-xs font-medium rounded-xl transition-colors">
+          キャンセル
+        </button>
+        <button id="executeDeleteBtn" class="flex-1 min-h-[44px] py-2 bg-apple-danger hover:bg-apple-dangerHover text-white text-xs font-medium rounded-xl transition-colors shadow-sm">
+          削除する
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- PDFインラインビューアモーダル -->
   <div id="pdfViewerModal" class="modal-overlay fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex flex-col hidden opacity-0 transition-opacity duration-200 unselectable">
     <div class="bg-white/10 backdrop-blur-md px-6 py-3 flex items-center justify-between text-white border-b border-white/10 safe-padding-top">
@@ -321,10 +345,6 @@
         <span id="viewerTitle" class="text-sm font-medium truncate">PDF プレビュー</span>
       </div>
       <div class="flex items-center space-x-3 shrink-0">
-        <button id="downloadPdfBtn" class="min-h-[44px] px-3 py-1.5 bg-apple-primary hover:bg-apple-primaryHover border border-apple-primary rounded-lg text-xs font-medium text-white transition-all flex items-center gap-1.5 shadow-sm">
-          <i data-lucide="download" class="w-3.5 h-3.5"></i>
-          <span>ダウンロード</span>
-        </button>
         <button id="removeWatermarkBtn" class="min-h-[44px] px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs font-medium text-white transition-all flex items-center gap-1.5">
           <i data-lucide="eye" class="w-3.5 h-3.5"></i>
           <span>透かし消去</span>
@@ -349,13 +369,14 @@
 
     let supabaseClient = null;
     let allPdfsCache = [];
-    let selectedTagFilter = null; // ★ アプデ：現在選択中のタグフィルター保持
+    let selectedTagFilter = null;
     let generatedThumbnailCanvas = null;
     let searchDebounceTimer = null;
-    let db = null; // IndexedDB instance
+    let db = null;
 
     let targetPdfForAuth = null;
     let targetPdfForEdit = null;
+    let targetPdfForDelete = null; // 削除対象の一時保持
     let currentViewingPdf = {
       url: null,
       title: '',
@@ -377,7 +398,7 @@
     const refreshBtn = document.getElementById('refreshBtn');
     const searchInput = document.getElementById('searchInput');
     const clearSearchBtn = document.getElementById('clearSearchBtn');
-    const tagTabList = document.getElementById('tagTabList'); // ★ アプデ：タグタブコンテナ
+    const tagTabList = document.getElementById('tagTabList');
 
     const pageLibrary = document.getElementById('pageLibrary');
     const pageUpload = document.getElementById('pageUpload');
@@ -406,12 +427,18 @@
     const cancelWatermarkAuthBtn = document.getElementById('cancelWatermarkAuthBtn');
     const confirmWatermarkAuthBtn = document.getElementById('confirmWatermarkAuthBtn');
 
+    // 削除確認モーダル要素
+    const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+    const deleteConfirmModalCard = document.getElementById('deleteConfirmModalCard');
+    const deleteConfirmFileName = document.getElementById('deleteConfirmFileName');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    const executeDeleteBtn = document.getElementById('executeDeleteBtn');
+
     const pdfViewerModal = document.getElementById('pdfViewerModal');
     const pdfCanvasContainer = document.getElementById('pdfCanvasContainer');
     const viewerTitle = document.getElementById('viewerTitle');
     const removeWatermarkBtn = document.getElementById('removeWatermarkBtn');
     const closeViewerBtn = document.getElementById('closeViewerBtn');
-    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
 
     window.addEventListener('DOMContentLoaded', async () => {
       lucide.createIcons();
@@ -421,7 +448,6 @@
       setupEventListeners();
     });
 
-    // PWA Manifest 動的生成
     function setupPWA() {
       const manifest = {
         name: "PDF共有ポータル",
@@ -447,7 +473,6 @@
       document.getElementsByTagName('head')[0].appendChild(link);
     }
 
-    // IndexedDB 初期化 (ローカルデータ永続化用)
     function initIndexedDB() {
       return new Promise((resolve) => {
         const request = indexedDB.open('PDFPortalDB', 1);
@@ -498,7 +523,6 @@
       }
     }
 
-    // 通信エラー時の可視化アラート
     function showCommunicationError(context, message) {
       alert(`【通信・システムエラー】\n発生箇所: ${context}\n詳細: ${message}\n\n通信環境を確認の上、再試行してください。`);
     }
@@ -566,19 +590,18 @@
       uploadBtn.addEventListener('click', handleUpload);
       refreshBtn.addEventListener('click', loadPdfs);
 
-      // モーダル外タップ/クリックで閉じる処理
       document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
           if (e.target === overlay) {
             closeEditTitleModal();
             closePdfAuthModal();
             closeWatermarkAuthModal();
+            closeDeleteConfirmModal();
             closePdfViewerModal();
           }
         });
       });
 
-      // Shift + Enter での送信制限設定
       uploadTagsInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && e.shiftKey) {
           e.preventDefault();
@@ -616,7 +639,8 @@
       cancelWatermarkAuthBtn.addEventListener('click', closeWatermarkAuthModal);
       confirmWatermarkAuthBtn.addEventListener('click', verifyWatermarkPassword);
 
-      downloadPdfBtn.addEventListener('click', downloadCurrentPdf);
+      cancelDeleteBtn.addEventListener('click', closeDeleteConfirmModal);
+      executeDeleteBtn.addEventListener('click', executePdfDeletion);
 
       closeViewerBtn.addEventListener('click', closePdfViewerModal);
       pdfViewerModal.addEventListener('contextmenu', e => e.preventDefault());
@@ -696,9 +720,7 @@
       }
     }
 
-    /* ★ アプデ：既存のタグをタブボタンとして抽出・描画する処理 */
     function renderTagTabs() {
-      // 全ドキュメントからユニークなタグを抽出
       const tagSet = new Set();
       allPdfsCache.forEach(item => {
         if (Array.isArray(item.tags)) {
@@ -711,14 +733,12 @@
       const uniqueTags = Array.from(tagSet);
       tagTabList.innerHTML = '';
 
-      // タグが存在しない場合
       if (uniqueTags.length === 0) {
         tagTabList.innerHTML = '<span class="text-xs text-apple-secondaryText py-1 px-2">タグはまだ登録されていません</span>';
         selectedTagFilter = null;
         return;
       }
 
-      // 「すべて」タブボタン
       const allBtn = document.createElement('button');
       allBtn.type = 'button';
       const isAllActive = selectedTagFilter === null;
@@ -735,7 +755,6 @@
       });
       tagTabList.appendChild(allBtn);
 
-      // 各個別タグタブボタン
       uniqueTags.forEach(tag => {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -747,7 +766,6 @@
         }`;
         btn.innerText = `#${tag}`;
         btn.addEventListener('click', () => {
-          // 同じタブを再タップで解除（すべて表示へトグル）
           if (selectedTagFilter === tag) {
             selectedTagFilter = null;
           } else {
@@ -760,18 +778,15 @@
       });
     }
 
-    /* ★ アプデ：検索機能（ファイル名・テキスト検索＋タグタブ選択での二重絞り込み） */
     function filterAndRenderPdfs(query) {
       let filtered = allPdfsCache;
 
-      // 1. タグタブ選択によるフィルタリング
       if (selectedTagFilter) {
         filtered = filtered.filter(item => 
           Array.isArray(item.tags) && item.tags.some(tag => tag.toLowerCase() === selectedTagFilter.toLowerCase())
         );
       }
 
-      // 2. 検索バー入力によるフィルタリング (ファイル名およびタグ)
       if (query) {
         const lowerQuery = query.toLowerCase();
         filtered = filtered.filter(item => {
@@ -848,6 +863,7 @@
               <button class="delete-btn p-2 bg-white/90 hover:bg-white text-apple-secondaryText hover:text-apple-danger rounded-xl backdrop-blur-md shadow-sm transition-all min-w-[44px] min-h-[44px] flex items-center justify-center" 
                       title="削除" 
                       data-id="${item.id}" 
+                      data-name="${escapeHtml(item.file_name)}"
                       data-path="${storagePath}">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
               </button>
@@ -865,7 +881,6 @@
                 ${escapeHtml(item.file_name)}
               </h3>
 
-              <!-- タグピル表示 (クリックでタグ絞り込みを実行) -->
               ${tags.length > 0 ? `
                 <div class="flex flex-wrap gap-1 mt-1.5">
                   ${tags.map(t => `<button type="button" class="tag-pill-btn px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-apple-secondaryText text-[10px] font-medium rounded-md transition-colors" data-tag="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join('')}
@@ -899,7 +914,7 @@
         });
       });
 
-      // カード内タグピルクリック時のフィルター連携
+      // タグピルクリック
       document.querySelectorAll('.tag-pill-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -910,7 +925,7 @@
         });
       });
 
-      // 編集ボタンイベント
+      // 編集ボタン
       document.querySelectorAll('.edit-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -926,14 +941,15 @@
         });
       });
 
-      // 削除ボタンイベント (CRUD: Delete)
+      // 削除ボタン（確認モーダル表示）
       document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           e.preventDefault();
           const button = e.currentTarget;
-          handleDeletePdf({
+          openDeleteConfirmModal({
             pdfId: button.getAttribute('data-id'),
+            fileName: button.getAttribute('data-name'),
             storagePath: button.getAttribute('data-path')
           });
         });
@@ -1046,14 +1062,35 @@
       renderPdfView();
     }
 
-    // CRUD: Delete（ユーザーによる完全削除処理）
-    async function handleDeletePdf(fileInfo) {
-      if (!supabaseClient) return;
+    // 削除確認ポップアップを開く
+    function openDeleteConfirmModal(fileInfo) {
+      targetPdfForDelete = fileInfo;
+      deleteConfirmFileName.innerText = fileInfo.fileName || 'このドキュメント';
 
-      if (!confirm('このファイルを削除してもよろしいですか？')) {
-        return;
-      }
+      deleteConfirmModal.classList.remove('hidden');
+      setTimeout(() => {
+        deleteConfirmModal.classList.remove('opacity-0');
+        deleteConfirmModalCard.classList.remove('scale-95');
+        deleteConfirmModalCard.classList.add('scale-100');
+      }, 10);
+    }
 
+    function closeDeleteConfirmModal() {
+      deleteConfirmModal.classList.add('opacity-0');
+      deleteConfirmModalCard.classList.remove('scale-100');
+      deleteConfirmModalCard.classList.add('scale-95');
+      setTimeout(() => {
+        deleteConfirmModal.classList.add('hidden');
+        targetPdfForDelete = null;
+      }, 200);
+    }
+
+    // 削除実行処理
+    async function executePdfDeletion() {
+      if (!supabaseClient || !targetPdfForDelete) return;
+
+      const fileInfo = targetPdfForDelete;
+      closeDeleteConfirmModal();
       updateStatus('loading', 'ファイルを削除中...');
 
       try {
@@ -1116,25 +1153,6 @@
       } else {
         watermarkPasswordErrorMsg.classList.remove('hidden');
         watermarkPasswordInput.classList.add('border-apple-danger');
-      }
-    }
-
-    async function downloadCurrentPdf() {
-      if (!currentViewingPdf.url) return;
-      try {
-        const response = await fetch(currentViewingPdf.url);
-        if (!response.ok) throw new Error('PDFのダウンロードに失敗しました。');
-        const blob = await response.blob();
-        
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `${currentViewingPdf.title || 'document'}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(a.href);
-      } catch (err) {
-        showCommunicationError('PDFダウンロード', err.message);
       }
     }
 
