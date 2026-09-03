@@ -75,10 +75,6 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
-    /* ビューアエリアのタッチ操作制御 */
-    #pdfViewportWrapper {
-      touch-action: none;
-    }
   </style>
 </head>
 <body class="bg-apple-bg text-apple-text font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-apple-primary selection:text-white unselectable">
@@ -227,7 +223,7 @@
   <!-- フッター -->
   <footer class="max-w-6xl mx-auto px-6 py-6 w-full text-center text-xs text-apple-secondaryText flex justify-between items-center border-t border-apple-border/40 safe-padding-bottom">
     <p>&copy; PDF Portal System</p>
-    <span class="opacity-30 text-[10px] font-mono">v3.1.0</span>
+    <span class="opacity-30 text-[10px] font-mono">v3.2.0</span>
   </footer>
 
   <!-- モーダル1: ファイル名＆タグ編集ダイアログ -->
@@ -341,30 +337,30 @@
     </div>
   </div>
 
-  <!-- PDFインラインビューアモーダル（横移動固定・縦移動＋ピンチズーム対応） -->
+  <!-- PDFインラインビューアモーダル（ボタン押下による拡大縮小・縦スクロール） -->
   <div id="pdfViewerModal" class="modal-overlay fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex flex-col hidden opacity-0 transition-opacity duration-200 unselectable">
     <!-- ビューアヘッダー -->
-    <div class="bg-white/10 backdrop-blur-md px-4 sm:px-6 py-3 flex items-center justify-between text-white border-b border-white/10 safe-padding-top shrink-0">
-      <div class="flex items-center space-x-3 overflow-hidden mr-2">
+    <div class="bg-white/10 backdrop-blur-md px-4 sm:px-6 py-2.5 flex items-center justify-between text-white border-b border-white/10 safe-padding-top shrink-0 gap-2">
+      <div class="flex items-center space-x-2 overflow-hidden min-w-0">
         <i data-lucide="file-text" class="w-5 h-5 text-apple-primary shrink-0"></i>
         <span id="viewerTitle" class="text-sm font-medium truncate">PDF プレビュー</span>
       </div>
       
-      <!-- コントロールバー -->
-      <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
+      <!-- コントロールバー（ボタン押下でのみ拡大縮小） -->
+      <div class="flex items-center space-x-2 shrink-0">
         <!-- ズーム操作コントロール -->
-        <div class="hidden sm:flex items-center bg-white/10 rounded-lg p-0.5 border border-white/10">
-          <button id="zoomOutBtn" class="p-1.5 hover:bg-white/20 rounded-md transition-colors text-white" title="縮小">
-            <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+        <div class="flex items-center bg-white/15 rounded-xl p-1 border border-white/15">
+          <button id="zoomOutBtn" class="p-1.5 hover:bg-white/20 rounded-lg transition-colors text-white min-w-[36px] min-h-[36px] flex items-center justify-center" title="縮小">
+            <i data-lucide="minus" class="w-4 h-4"></i>
           </button>
-          <span id="zoomPercentText" class="text-[11px] font-mono px-2 min-w-[48px] text-center">100%</span>
-          <button id="zoomInBtn" class="p-1.5 hover:bg-white/20 rounded-md transition-colors text-white" title="拡大">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span id="zoomPercentText" class="text-xs font-mono px-2 min-w-[46px] text-center font-semibold">100%</span>
+          <button id="zoomInBtn" class="p-1.5 hover:bg-white/20 rounded-lg transition-colors text-white min-w-[36px] min-h-[36px] flex items-center justify-center" title="拡大">
+            <i data-lucide="plus" class="w-4 h-4"></i>
           </button>
-          <button id="zoomResetBtn" class="px-2 py-1 text-[10px] hover:bg-white/20 rounded-md transition-colors text-gray-300 border-l border-white/10 ml-0.5">リセット</button>
+          <button id="zoomResetBtn" class="px-2 py-1 text-[11px] hover:bg-white/20 rounded-lg transition-colors text-gray-200 border-l border-white/20 ml-1">リセット</button>
         </div>
 
-        <button id="removeWatermarkBtn" class="min-h-[38px] px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs font-medium text-white transition-all flex items-center gap-1.5">
+        <button id="removeWatermarkBtn" class="min-h-[38px] px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-medium text-white transition-all flex items-center gap-1.5">
           <i data-lucide="shield-off" class="w-3.5 h-3.5"></i>
           <span class="hidden sm:inline">透かし消去</span>
         </button>
@@ -374,9 +370,9 @@
       </div>
     </div>
 
-    <!-- ビューア表示エリア（横幅100%中央配置、横スクロール・横パン完全無効化） -->
-    <div id="pdfViewportWrapper" class="relative flex-grow overflow-hidden w-full h-full cursor-grab active:cursor-grabbing flex justify-center">
-      <div id="pdfCanvasContainer" class="absolute top-0 flex flex-col items-center space-y-6 origin-top transition-transform duration-75">
+    <!-- ビューア表示エリア（通常の縦スクロールコンテナ、ドラッグ・ピンチは無効） -->
+    <div id="pdfViewportWrapper" class="relative flex-grow overflow-y-auto overflow-x-hidden w-full h-full flex justify-center py-6">
+      <div id="pdfCanvasContainer" class="flex flex-col items-center space-y-6 transition-all duration-200">
         <!-- ページCanvasが動的生成されます -->
       </div>
     </div>
@@ -406,17 +402,11 @@
       isWatermarkDisabled: false
     };
 
-    // ズーム・パン状態管理（横移動は固定するためpanXは扱わない）
-    const viewerState = {
-      scale: 1.0,
-      minScale: 0.6,
-      maxScale: 3.5,
-      panY: 0,
-      isDragging: false,
-      startY: 0,
-      initialPinchDistance: 0,
-      initialScale: 1.0
-    };
+    // ズーム倍率管理（ボタン操作専用）
+    let currentZoomScale = 1.0;
+    const MIN_ZOOM = 0.5;
+    const MAX_ZOOM = 3.0;
+    const ZOOM_STEP = 0.25;
 
     const statusBadge = document.getElementById('statusBadge');
     const statusDot = document.getElementById('statusDot');
@@ -470,7 +460,6 @@
 
     // ビューア要素
     const pdfViewerModal = document.getElementById('pdfViewerModal');
-    const pdfViewportWrapper = document.getElementById('pdfViewportWrapper');
     const pdfCanvasContainer = document.getElementById('pdfCanvasContainer');
     const viewerTitle = document.getElementById('viewerTitle');
     const removeWatermarkBtn = document.getElementById('removeWatermarkBtn');
@@ -486,7 +475,7 @@
       await initIndexedDB();
       initSupabase();
       setupEventListeners();
-      setupPinchAndZoomViewer();
+      setupZoomButtonControls();
     });
 
     function setupPWA() {
@@ -687,104 +676,41 @@
       pdfViewerModal.addEventListener('contextmenu', e => e.preventDefault());
     }
 
-    // ピンチイン・ピンチアウト・ズームおよび縦方向のみのドラッグパン操作
-    function setupPinchAndZoomViewer() {
-      // 横位置は常に中央固定（translateXは使用せず、Y軸移動のみ適用）
-      const updateViewerTransform = () => {
-        pdfCanvasContainer.style.transform = `translateY(${viewerState.panY}px) scale(${viewerState.scale})`;
-        zoomPercentText.innerText = `${Math.round(viewerState.scale * 100)}%`;
-      };
-
-      const resetViewerTransform = () => {
-        viewerState.scale = 1.0;
-        viewerState.panY = 0;
-        updateViewerTransform();
+    // ボタン押下による拡大・縮小処理のみをバインド
+    function setupZoomButtonControls() {
+      const applyZoom = () => {
+        zoomPercentText.innerText = `${Math.round(currentZoomScale * 100)}%`;
+        // 各ページのキャンバスサイズを縦横比を完全に維持したまま拡大縮小
+        const canvases = pdfCanvasContainer.querySelectorAll('canvas');
+        canvases.forEach(canvas => {
+          const baseWidth = parseFloat(canvas.getAttribute('data-base-width'));
+          const aspect = parseFloat(canvas.getAttribute('data-aspect'));
+          if (baseWidth && aspect) {
+            const newWidth = Math.round(baseWidth * currentZoomScale);
+            const newHeight = Math.round(newWidth / aspect);
+            canvas.style.width = `${newWidth}px`;
+            canvas.style.height = `${newHeight}px`;
+          }
+        });
       };
 
       zoomInBtn.addEventListener('click', () => {
-        viewerState.scale = Math.min(viewerState.maxScale, viewerState.scale + 0.25);
-        updateViewerTransform();
+        if (currentZoomScale < MAX_ZOOM) {
+          currentZoomScale = Math.min(MAX_ZOOM, parseFloat((currentZoomScale + ZOOM_STEP).toFixed(2)));
+          applyZoom();
+        }
       });
 
       zoomOutBtn.addEventListener('click', () => {
-        viewerState.scale = Math.max(viewerState.minScale, viewerState.scale - 0.25);
-        updateViewerTransform();
+        if (currentZoomScale > MIN_ZOOM) {
+          currentZoomScale = Math.max(MIN_ZOOM, parseFloat((currentZoomScale - ZOOM_STEP).toFixed(2)));
+          applyZoom();
+        }
       });
 
-      zoomResetBtn.addEventListener('click', resetViewerTransform);
-
-      // マウスホイールによる縦スクロール＆ズーム（横移動は排除）
-      pdfViewportWrapper.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        if (e.ctrlKey || e.metaKey) {
-          const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
-          viewerState.scale = Math.min(viewerState.maxScale, Math.max(viewerState.minScale, viewerState.scale * zoomFactor));
-        } else {
-          viewerState.panY -= e.deltaY;
-        }
-        updateViewerTransform();
-      }, { passive: false });
-
-      // マウスドラッグによる縦移動（横移動は無効）
-      pdfViewportWrapper.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
-        viewerState.isDragging = true;
-        viewerState.startY = e.clientY - viewerState.panY;
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (!viewerState.isDragging) return;
-        viewerState.panY = e.clientY - viewerState.startY;
-        updateViewerTransform();
-      });
-
-      window.addEventListener('mouseup', () => {
-        viewerState.isDragging = false;
-      });
-
-      // モバイル：タッチイベント（横移動は完全に排除し、縦ドラッグ＋ピンチのみ処理）
-      const getTouchDistance = (t1, t2) => {
-        const dx = t1.clientX - t2.clientX;
-        const dy = t1.clientY - t2.clientY;
-        return Math.hypot(dx, dy);
-      };
-
-      pdfViewportWrapper.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-          viewerState.isDragging = true;
-          viewerState.startY = e.touches[0].clientY - viewerState.panY;
-        } else if (e.touches.length === 2) {
-          viewerState.isDragging = false;
-          viewerState.initialPinchDistance = getTouchDistance(e.touches[0], e.touches[1]);
-          viewerState.initialScale = viewerState.scale;
-        }
-      }, { passive: false });
-
-      pdfViewportWrapper.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (e.touches.length === 1 && viewerState.isDragging) {
-          // 縦方向のみ移動
-          viewerState.panY = e.touches[0].clientY - viewerState.startY;
-          updateViewerTransform();
-        } else if (e.touches.length === 2) {
-          // ピンチズーム
-          const currentDist = getTouchDistance(e.touches[0], e.touches[1]);
-          if (viewerState.initialPinchDistance > 0) {
-            const factor = currentDist / viewerState.initialPinchDistance;
-            viewerState.scale = Math.min(viewerState.maxScale, Math.max(viewerState.minScale, viewerState.initialScale * factor));
-            updateViewerTransform();
-          }
-        }
-      }, { passive: false });
-
-      pdfViewportWrapper.addEventListener('touchend', (e) => {
-        if (e.touches.length === 0) {
-          viewerState.isDragging = false;
-          viewerState.initialPinchDistance = 0;
-        } else if (e.touches.length === 1) {
-          viewerState.isDragging = true;
-          viewerState.startY = e.touches[0].clientY - viewerState.panY;
-        }
+      zoomResetBtn.addEventListener('click', () => {
+        currentZoomScale = 1.0;
+        applyZoom();
       });
     }
 
@@ -814,7 +740,6 @@
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         const page = await pdf.getPage(1);
         
-        // サムネイル生成時もアスペクト比を維持
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         const viewport = page.getViewport({ scale: 0.75 * dpr });
         const canvas = document.createElement('canvas');
@@ -1197,10 +1122,8 @@
       currentViewingPdf.title = name;
       currentViewingPdf.isWatermarkDisabled = false;
 
-      // ズーム・パン状態の初期化（横位置は常に0固定）
-      viewerState.scale = 1.0;
-      viewerState.panY = 0;
-      pdfCanvasContainer.style.transform = `translateY(0px) scale(1)`;
+      // ズーム倍率を100%に初期化
+      currentZoomScale = 1.0;
       zoomPercentText.innerText = '100%';
 
       removeWatermarkBtn.classList.remove('hidden');
@@ -1300,7 +1223,7 @@
     }
 
     /**
-     * 元の縦横比（アスペクト比）を完全に維持した高精細PDFレンダリング
+     * 高DPI（Retina）対応かつ縦横比を完全に維持したPDFレンダリング
      */
     async function renderPdfView() {
       pdfCanvasContainer.innerHTML = `
@@ -1324,24 +1247,24 @@
         const watermarkText = `${CURRENT_USER_ID} | ${dateFormatted}`;
 
         const dpr = Math.max(window.devicePixelRatio || 1, 2.0);
-        // ビューアコンテナの表示可能横幅（余白を引いた値）
         const containerWidth = Math.min(window.innerWidth - 32, 900);
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
           const page = await pdf.getPage(pageNum);
           
-          // PDFページ固有のオリジナルサイズを取得
+          // PDFページ固有のサイズ・アスペクト比を取得
           const unscaledViewport = page.getViewport({ scale: 1.0 });
           const originalAspect = unscaledViewport.width / unscaledViewport.height;
 
-          // コンテナ幅に合わせて、縦横比を一切崩さずにベーススケールを算出
-          const targetWidth = Math.min(containerWidth, unscaledViewport.width * 1.5);
-          const baseScale = targetWidth / unscaledViewport.width;
+          // 画面幅に応じた基準幅を算出（縦横比は維持）
+          const baseWidth = Math.min(containerWidth, unscaledViewport.width * 1.5);
+          const baseScale = baseWidth / unscaledViewport.width;
 
-          // 内部バッファ用の高DPI Viewport
+          // 高解像度Canvasバッファ用Viewport
           const renderViewport = page.getViewport({ scale: baseScale * dpr });
-          // CSS表示用Viewport（完全な縦横比を維持）
-          const cssWidth = Math.round(targetWidth);
+          
+          // 現在のズーム倍率を反映した初期表示サイズ
+          const cssWidth = Math.round(baseWidth * currentZoomScale);
           const cssHeight = Math.round(cssWidth / originalAspect);
 
           const canvas = document.createElement('canvas');
@@ -1350,13 +1273,15 @@
           canvas.width = Math.floor(renderViewport.width);
           canvas.height = Math.floor(renderViewport.height);
           
-          // アスペクト比を厳密に固定し、余計なCSSによる伸縮を防ぐ
+          // アスペクト比と基準幅を保持
+          canvas.setAttribute('data-base-width', baseWidth);
+          canvas.setAttribute('data-aspect', originalAspect);
           canvas.style.width = `${cssWidth}px`;
           canvas.style.height = `${cssHeight}px`;
           canvas.style.aspectRatio = `${originalAspect}`;
-          canvas.className = "shadow-2xl rounded bg-white pointer-events-none block shrink-0";
+          canvas.className = "shadow-2xl rounded bg-white block shrink-0 transition-all duration-150";
 
-          // 高解像度レンダリング実行
+          // 高解像度描画
           await page.render({ 
             canvasContext: context, 
             viewport: renderViewport 
@@ -1414,8 +1339,8 @@
       setTimeout(() => {
         pdfViewerModal.classList.add('hidden');
         pdfCanvasContainer.innerHTML = '';
-        viewerState.scale = 1.0;
-        viewerState.panY = 0;
+        currentZoomScale = 1.0;
+        zoomPercentText.innerText = '100%';
       }, 200);
     }
 
