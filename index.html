@@ -348,18 +348,6 @@
       </div>
       
       <div class="flex items-center space-x-2 shrink-0">
-        <!-- PC用ズームコントロール（デスクトップ時のみ上部に表示） -->
-        <div class="hidden sm:flex items-center bg-white/15 rounded-xl p-1 border border-white/15">
-          <button type="button" class="btn-zoom-out p-1.5 hover:bg-white/20 rounded-lg transition-colors text-white min-w-[36px] min-h-[36px] flex items-center justify-center" title="縮小">
-            <i data-lucide="minus" class="w-4 h-4"></i>
-          </button>
-          <span class="zoom-percent-text text-xs font-mono px-2 min-w-[46px] text-center font-semibold">100%</span>
-          <button type="button" class="btn-zoom-in p-1.5 hover:bg-white/20 rounded-lg transition-colors text-white min-w-[36px] min-h-[36px] flex items-center justify-center" title="拡大">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-          </button>
-          <button type="button" class="btn-zoom-reset px-2 py-1 text-[11px] hover:bg-white/20 rounded-lg transition-colors text-gray-200 border-l border-white/20 ml-1">リセット</button>
-        </div>
-
         <button id="removeWatermarkBtn" class="min-h-[38px] px-2.5 sm:px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-medium text-white transition-all flex items-center gap-1.5">
           <i data-lucide="shield-off" class="w-3.5 h-3.5"></i>
           <span class="hidden sm:inline">透かし消去</span>
@@ -371,25 +359,10 @@
     </div>
 
     <!-- ビューア表示エリア（縦スクロールのみ、横移動固定） -->
-    <div id="pdfViewportWrapper" class="relative flex-grow overflow-y-auto overflow-x-hidden w-full h-full flex justify-center py-6 pb-24 sm:pb-8">
-      <div id="pdfCanvasContainer" class="flex flex-col items-center space-y-6 transition-all duration-200">
+    <div id="pdfViewportWrapper" class="relative flex-grow overflow-y-auto overflow-x-hidden w-full h-full flex justify-center py-6 pb-12 sm:pb-8">
+      <div id="pdfCanvasContainer" class="flex flex-col items-center space-y-6">
         <!-- ページCanvasが動的生成されます -->
       </div>
-    </div>
-
-    <!-- ★スマホ用フローティングズームバー（スマホ閲覧時に画面下部中央に常時表示） -->
-    <div class="sm:hidden fixed bottom-6 inset-x-0 mx-auto w-fit z-50 flex items-center gap-1 bg-black/70 backdrop-blur-xl border border-white/20 px-3 py-1.5 rounded-full shadow-2xl safe-padding-bottom">
-      <button type="button" class="btn-zoom-out w-11 h-11 active:bg-white/20 rounded-full text-white flex items-center justify-center transition-colors" title="縮小">
-        <i data-lucide="minus" class="w-5 h-5"></i>
-      </button>
-      <span class="zoom-percent-text text-xs font-mono font-bold text-white px-2 min-w-[50px] text-center">100%</span>
-      <button type="button" class="btn-zoom-in w-11 h-11 active:bg-white/20 rounded-full text-white flex items-center justify-center transition-colors" title="拡大">
-        <i data-lucide="plus" class="w-5 h-5"></i>
-      </button>
-      <div class="h-4 w-[1px] bg-white/20 mx-1"></div>
-      <button type="button" class="btn-zoom-reset px-3 h-8 text-[11px] font-medium text-white/90 active:bg-white/20 rounded-full transition-colors flex items-center justify-center">
-        リセット
-      </button>
     </div>
 
   </div>
@@ -417,12 +390,6 @@
       title: '',
       isWatermarkDisabled: false
     };
-
-    // ズーム倍率管理（ボタン操作専用）
-    let currentZoomScale = 1.0;
-    const MIN_ZOOM = 0.5;
-    const MAX_ZOOM = 3.0;
-    const ZOOM_STEP = 0.25;
 
     const statusBadge = document.getElementById('statusBadge');
     const statusDot = document.getElementById('statusDot');
@@ -487,7 +454,6 @@
       await initIndexedDB();
       initSupabase();
       setupEventListeners();
-      setupZoomButtonControls();
     });
 
     function setupPWA() {
@@ -686,59 +652,6 @@
 
       closeViewerBtn.addEventListener('click', closePdfViewerModal);
       pdfViewerModal.addEventListener('contextmenu', e => e.preventDefault());
-    }
-
-    // スマホ・PC共通のズームボタン操作
-    function setupZoomButtonControls() {
-      const applyZoom = () => {
-        // すべての倍率表示テキストを更新
-        document.querySelectorAll('.zoom-percent-text').forEach(el => {
-          el.innerText = `${Math.round(currentZoomScale * 100)}%`;
-        });
-
-        const canvases = pdfCanvasContainer.querySelectorAll('canvas');
-        canvases.forEach(canvas => {
-          const baseWidth = parseFloat(canvas.getAttribute('data-base-width'));
-          const aspect = parseFloat(canvas.getAttribute('data-aspect'));
-          if (baseWidth && aspect) {
-            const newWidth = Math.round(baseWidth * currentZoomScale);
-            const newHeight = Math.round(newWidth / aspect);
-            canvas.style.width = `${newWidth}px`;
-            canvas.style.height = `${newHeight}px`;
-          }
-        });
-      };
-
-      // 拡大ボタン（スマホ・PC両方）
-      document.querySelectorAll('.btn-zoom-in').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          if (currentZoomScale < MAX_ZOOM) {
-            currentZoomScale = Math.min(MAX_ZOOM, parseFloat((currentZoomScale + ZOOM_STEP).toFixed(2)));
-            applyZoom();
-          }
-        });
-      });
-
-      // 縮小ボタン（スマホ・PC両方）
-      document.querySelectorAll('.btn-zoom-out').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          if (currentZoomScale > MIN_ZOOM) {
-            currentZoomScale = Math.max(MIN_ZOOM, parseFloat((currentZoomScale - ZOOM_STEP).toFixed(2)));
-            applyZoom();
-          }
-        });
-      });
-
-      // リセットボタン（スマホ・PC両方）
-      document.querySelectorAll('.btn-zoom-reset').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          currentZoomScale = 1.0;
-          applyZoom();
-        });
-      });
     }
 
     async function handleFileSelect() {
@@ -1149,11 +1062,6 @@
       currentViewingPdf.title = name;
       currentViewingPdf.isWatermarkDisabled = false;
 
-      currentZoomScale = 1.0;
-      document.querySelectorAll('.zoom-percent-text').forEach(el => {
-        el.innerText = '100%';
-      });
-
       removeWatermarkBtn.classList.remove('hidden');
       renderPdfView();
     }
@@ -1275,26 +1183,20 @@
         const watermarkText = `${CURRENT_USER_ID} | ${dateFormatted}`;
 
         const dpr = Math.max(window.devicePixelRatio || 1, 2.0);
-        // スマホ画面のパディングを考慮した横幅設定
         const isMobile = window.innerWidth < 640;
         const containerWidth = isMobile ? (window.innerWidth - 24) : Math.min(window.innerWidth - 32, 900);
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
           const page = await pdf.getPage(pageNum);
           
-          // PDFページ固有のサイズ・アスペクト比を取得
           const unscaledViewport = page.getViewport({ scale: 1.0 });
           const originalAspect = unscaledViewport.width / unscaledViewport.height;
 
-          // スマホ時は画面幅にぴったり合わせ、PC時は適度な最大幅を適用
           const baseWidth = isMobile ? containerWidth : Math.min(containerWidth, unscaledViewport.width * 1.5);
           const baseScale = baseWidth / unscaledViewport.width;
 
-          // 高解像度Canvasバッファ用Viewport
           const renderViewport = page.getViewport({ scale: baseScale * dpr });
-          
-          // 初期倍率を反映したCSS表示サイズ
-          const cssWidth = Math.round(baseWidth * currentZoomScale);
+          const cssWidth = Math.round(baseWidth);
           const cssHeight = Math.round(cssWidth / originalAspect);
 
           const canvas = document.createElement('canvas');
@@ -1303,20 +1205,16 @@
           canvas.width = Math.floor(renderViewport.width);
           canvas.height = Math.floor(renderViewport.height);
           
-          canvas.setAttribute('data-base-width', baseWidth);
-          canvas.setAttribute('data-aspect', originalAspect);
           canvas.style.width = `${cssWidth}px`;
           canvas.style.height = `${cssHeight}px`;
           canvas.style.aspectRatio = `${originalAspect}`;
-          canvas.className = "shadow-2xl rounded bg-white block shrink-0 transition-all duration-150";
+          canvas.className = "shadow-2xl rounded bg-white block shrink-0";
 
-          // 高解像度描画
           await page.render({ 
             canvasContext: context, 
             viewport: renderViewport 
           }).promise;
 
-          // 透かし描画
           if (!currentViewingPdf.isWatermarkDisabled) {
             drawWatermarkOnCanvas(context, canvas.width, canvas.height, watermarkText, dpr);
           }
@@ -1368,10 +1266,6 @@
       setTimeout(() => {
         pdfViewerModal.classList.add('hidden');
         pdfCanvasContainer.innerHTML = '';
-        currentZoomScale = 1.0;
-        document.querySelectorAll('.zoom-percent-text').forEach(el => {
-          el.innerText = '100%';
-        });
       }, 200);
     }
 
